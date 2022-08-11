@@ -1,7 +1,13 @@
+use std::collections::VecDeque;
+
 use super::Bus;
 
-/// default starting point for most Chip8 programs
+/// The default starting address for most Chip8 programs.
 const STARTING_PC: usize = 0x200;
+
+/// The maximum amount of instructions that should be stored
+/// in the `Processor`'s buffer of instructions.
+const INSTRUCTION_BUFFER_LENGTH: usize = 200;
 
 /// Describes how the program counter should be updated after
 /// executing an instruction.
@@ -14,6 +20,18 @@ enum PCUpdate {
 
     /// Jump to the given address.
     Jump(usize),
+}
+
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
+pub struct Instruction {
+    /// The address of the instruction.
+    pub address: usize,
+
+    /// The instruction's opcode.
+    pub opcode: usize,
+
+    /// A display friendly string explaining what this instruction did.
+    pub display: String,
 }
 
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
@@ -34,14 +52,12 @@ pub struct Processor {
     /// Stack memory
     pub stack: [usize; 16],
 
-    /// The last opcode that has been processed
-    pub last_opcode: usize,
-
-    /// The address of the last opcode that has been processed
-    pub last_opcode_addr: usize,
-
     /// A display string explaining what the current opcode is doing
     pub display: String,
+
+    /// The last [`INSTRUCTION_BUFFER_LENGTH`] instructions that the
+    /// `Processor` has executed.
+    pub instructions: VecDeque<Instruction>,
 }
 
 impl Processor {
@@ -66,17 +82,34 @@ impl Processor {
         // get the next two bytes and combine into one two-byte instruction
         let opcode = (usize::from(bus.memory[self.pc]) << 8) | usize::from(bus.memory[self.pc + 1]);
 
-        self.last_opcode = opcode;
-        self.last_opcode_addr = self.pc;
+        let (pc_update, display) = self.process_opcode(opcode, bus);
 
-        match self.process_opcode(opcode, bus) {
+        // push new instruction
+        let instruction = Instruction {
+            address: self.pc,
+            opcode,
+            display,
+        };
+        self.push_instruction(instruction);
+
+        match pc_update {
             PCUpdate::Next => self.pc += 2,
             PCUpdate::SkipNext => self.pc += 4,
             PCUpdate::Jump(addr) => self.pc = addr,
         }
     }
 
-    fn process_opcode(&mut self, opcode: usize, bus: &mut Bus) -> PCUpdate {
+    /// Push an instruction to the instruction buffer. This will
+    /// remove the last instruction in the list if the length has exceeded
+    /// the [`INSTRUCTION_BUFFER_LENGTH`].
+    fn push_instruction(&mut self, instruction: Instruction) {
+        self.instructions.push_front(instruction);
+        if self.instructions.len() > INSTRUCTION_BUFFER_LENGTH {
+            self.instructions.pop_back();
+        }
+    }
+
+    fn process_opcode(&mut self, opcode: usize, bus: &mut Bus) -> (PCUpdate, String) {
         // define some commonly used variables
         let x = (opcode & 0x0F00) >> 8;
         let y = (opcode & 0x00F0) >> 4;
@@ -89,132 +122,132 @@ impl Processor {
                 // 00E0
                 0x0000 => {
                     bus.graphics.clear();
-                    self.display = "Clear the screen".into();
-                    PCUpdate::Next
+                    let display = "Clear the screen".into();
+                    (PCUpdate::Next, display)
                 }
 
                 // 00EE
                 0x000E => {
                     self.sp -= 1;
-                    self.display = format!("Return to addr {:#06X}", self.stack[self.sp]);
-                    PCUpdate::Jump(self.stack[self.sp])
+                    let display = format!("Return to addr {:#06X}", self.stack[self.sp]);
+                    (PCUpdate::Jump(self.stack[self.sp]), display)
                 }
 
                 // invalid
                 _ => {
                     log::error!("Invalid 0x0___ instruction: {opcode:X}");
-                    self.display = "Invalid instruction".into();
-                    PCUpdate::Next
+                    let display = "Invalid instruction".into();
+                    (PCUpdate::Next, display)
                 }
             },
 
             // 1nnn
             0x1 => {
-                self.display = format!("Jump to addr {nnn:#06X}");
-                PCUpdate::Jump(nnn)
+                let display = format!("Jump to addr {nnn:#06X}");
+                (PCUpdate::Jump(nnn), display)
             }
 
             // 2nnn
             0x2 => {
                 self.stack[self.sp] = self.pc + 2;
                 self.sp += 1;
-                self.display = format!("Call subroutine at {nnn:#06X}");
-                PCUpdate::Jump(nnn)
+                let display = format!("Call subroutine at {nnn:#06X}");
+                (PCUpdate::Jump(nnn), display)
             }
 
             // 3xnn
             0x3 => {
-                self.display = format!("If V{x:X} ({}) == {nn}, skip next instr", self.v[x]);
+                let display = format!("If V{x:X} ({}) == {nn}, skip next instr", self.v[x]);
                 if self.v[x] == nn {
-                    PCUpdate::SkipNext
+                    (PCUpdate::SkipNext, display)
                 } else {
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
             }
 
             // 4Xnn
             0x4 => {
-                self.display = format!("If V{x:X} ({}) != {nn}, skip next instr", self.v[x]);
+                let display = format!("If V{x:X} ({}) != {nn}, skip next instr", self.v[x]);
                 if self.v[x] != nn {
-                    PCUpdate::SkipNext
+                    (PCUpdate::SkipNext, display)
                 } else {
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
             }
 
             // 5xy0
             0x5 => {
-                self.display = format!(
+                let display = format!(
                     "If V{x:X} ({}) == V{y:X} ({}), skip next instr",
                     self.v[x], self.v[y]
                 );
                 if self.v[x] == self.v[y] {
-                    PCUpdate::SkipNext
+                    (PCUpdate::SkipNext, display)
                 } else {
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
             }
 
             // 6xnn
             0x6 => {
-                self.display = format!("Set V{x:X} to {nn}");
+                let display = format!("Set V{x:X} to {nn}");
                 self.v[x] = nn;
-                PCUpdate::Next
+                (PCUpdate::Next, display)
             }
 
             // 7xnn
             0x7 => {
-                self.display = format!("Add {nn} to V{x:X}");
+                let display = format!("Add {nn} to V{x:X}");
                 self.v[x] = self.v[x].wrapping_add(nn);
-                PCUpdate::Next
+                (PCUpdate::Next, display)
             }
 
             // 8___
             0x8 => match opcode & 0x000F {
                 // 8xy0
                 0x0 => {
-                    self.display = format!("Set V{x:X} to V{y:X} ({})", self.v[y]);
+                    let display = format!("Set V{x:X} to V{y:X} ({})", self.v[y]);
                     self.v[x] = self.v[y];
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // 8xy1
                 0x1 => {
-                    self.display = format!(
+                    let display = format!(
                         "Set V{x:X} to V{x:X} OR V{y:X} ({:2X} OR {:2X})",
                         self.v[x], self.v[y]
                     );
                     self.v[x] |= self.v[y];
                     self.v[0xF] = 0;
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // 8xy2
                 0x2 => {
-                    self.display = format!(
+                    let display = format!(
                         "Set V{x:X} to V{x:X} AND V{y:X} ({:2X} AND {:2X})",
                         self.v[x], self.v[y]
                     );
                     self.v[x] &= self.v[y];
                     self.v[0xF] = 0;
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // 8xy3
                 0x3 => {
-                    self.display = format!(
+                    let display = format!(
                         "Set V{x:X} to V{x:X} XOR V{y:X} ({:2X} XOR {:2X})",
                         self.v[x], self.v[y]
                     );
                     self.v[x] ^= self.v[y];
                     self.v[0xF] = 0;
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // 8xy4
                 0x4 => {
                     let (result, overflow) = self.v[x].overflowing_add(self.v[y]);
-                    self.display = format!(
+                    let display = format!(
                         "Set V{x:X} to ({} + {}), VF = {}",
                         self.v[x],
                         self.v[y],
@@ -222,13 +255,13 @@ impl Processor {
                     );
                     self.v[x] = result;
                     self.v[0xF] = u8::from(overflow);
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // 8xy5
                 0x5 => {
                     let (result, overflow) = self.v[x].overflowing_sub(self.v[y]);
-                    self.display = format!(
+                    let display = format!(
                         "Set V{x:X} to ({} - {}), VF = {}",
                         self.v[x],
                         self.v[y],
@@ -236,22 +269,22 @@ impl Processor {
                     );
                     self.v[x] = result;
                     self.v[0xF] = u8::from(!overflow);
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // 8xy6
                 0x6 => {
                     let overflow = self.v[x] & 1;
-                    self.display = format!("V{x:X} shifted one right, VF = {}", overflow);
+                    let display = format!("V{x:X} shifted one right, VF = {}", overflow);
                     self.v[x] >>= 1;
                     self.v[0xF] = overflow;
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // 8xy7
                 0x7 => {
                     let (result, overflow) = self.v[y].overflowing_sub(self.v[x]);
-                    self.display = format!(
+                    let display = format!(
                         "Set V{x:X} to ({} - {}), VF = {}",
                         self.v[y],
                         self.v[x],
@@ -259,60 +292,60 @@ impl Processor {
                     );
                     self.v[x] = result;
                     self.v[0xF] = u8::from(!overflow);
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // 8xyE
                 0xE => {
                     let overflow = (self.v[x] & 0x80) >> 7;
-                    self.display = format!("V{x:X} shifted one left, VF = {}", overflow);
+                    let display = format!("V{x:X} shifted one left, VF = {}", overflow);
                     self.v[x] <<= 1;
                     // self.v[y] = self.v[x] << 1;
                     self.v[0xF] = overflow;
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // invalid
                 _ => {
-                    self.display = "Invalid instruction".into();
+                    let display = "Invalid instruction".into();
                     log::error!("Invalid 8XY_ instruction: {opcode:X}");
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
             },
 
             // 9xy0
             9 => {
-                self.display = format!(
+                let display = format!(
                     "If V{x:X} ({}) != V{y:X} ({}), skip next instr",
                     self.v[x], self.v[y]
                 );
                 if self.v[x] != self.v[y] {
-                    PCUpdate::SkipNext
+                    (PCUpdate::SkipNext, display)
                 } else {
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
             }
 
             // Annn
             0xA => {
-                self.display = format!("Set I register to {nnn:#06X}");
+                let display = format!("Set I register to {nnn:#06X}");
                 self.i = nnn;
-                PCUpdate::Next
+                (PCUpdate::Next, display)
             }
 
             // Bnnn
             0xB => {
-                self.display = format!("Jump to {nnn:#06X} + {:#06X}", self.v[0]);
-                PCUpdate::Jump(nnn + usize::from(self.v[0]))
+                let display = format!("Jump to {nnn:#06X} + {:#06X}", self.v[0]);
+                (PCUpdate::Jump(nnn + usize::from(self.v[0])), display)
             }
 
             // Cxnn
             0xC => {
                 let mut buf = [0u8; 1];
                 getrandom::getrandom(&mut buf).unwrap();
-                self.display = format!("Set V{x:X} to {} [rand] AND {nn:#X}", buf[0]);
+                let display = format!("Set V{x:X} to {} [rand] AND {nn:#X}", buf[0]);
                 self.v[x] = buf[0] & nn;
-                PCUpdate::Next
+                (PCUpdate::Next, display)
             }
 
             // Dxyn
@@ -320,7 +353,7 @@ impl Processor {
                 let n = opcode & 0xF;
                 let x = self.v[x].into();
                 let y: usize = self.v[y].into();
-                self.display = format!(
+                let display = format!(
                     "Draw {n} byte sprite from addr {:#06X} at point ({x}, {y})",
                     self.i
                 );
@@ -330,7 +363,7 @@ impl Processor {
                     collision |= bus.graphics.draw_byte(x, y + i, data);
                 }
                 self.v[0xF] = collision.into();
-                PCUpdate::Next
+                (PCUpdate::Next, display)
             }
 
             // E___
@@ -338,36 +371,33 @@ impl Processor {
                 // Ex9E
                 0x000E => {
                     let pressed = bus.input.is_key_pressed(self.v[x]);
-                    self.display = format!(
-                        "Skip instr if key {:#X} pressed ({pressed})",
-                        self.v[x]
-                    );
+                    let display = format!("Skip instr if key {:#X} pressed ({pressed})", self.v[x]);
                     if pressed {
-                        PCUpdate::SkipNext
+                        (PCUpdate::SkipNext, display)
                     } else {
-                        PCUpdate::Next
+                        (PCUpdate::Next, display)
                     }
                 }
 
                 // ExA1
                 0x0001 => {
                     let not_pressed = !bus.input.is_key_pressed(self.v[x]);
-                    self.display = format!(
+                    let display = format!(
                         "Skip next instr if key code {:#X} not pressed ({not_pressed})",
                         self.v[x]
                     );
                     if not_pressed {
-                        PCUpdate::SkipNext
+                        (PCUpdate::SkipNext, display)
                     } else {
-                        PCUpdate::Next
+                        (PCUpdate::Next, display)
                     }
                 }
 
                 // invalid
                 _ => {
-                    self.display = "Invalid instruction".into();
+                    let display = "Invalid instruction".into();
                     log::error!("Invalid EX__ instruction: {opcode:X}");
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
             },
 
@@ -375,90 +405,90 @@ impl Processor {
             0xF => match opcode & 0x00FF {
                 // Fx07
                 0x0007 => {
-                    self.display = format!("Set V{x:X} to delay timer ({})", bus.clock.delay_timer);
+                    let display = format!("Set V{x:X} to delay timer ({})", bus.clock.delay_timer);
                     self.v[x] = bus.clock.delay_timer;
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // Fx0A
                 0x000A => {
-                    self.display = format!("Store next key press in V{x:X}");
+                    let display = format!("Store next key press in V{x:X}");
                     bus.input.request_key_press(x);
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // Fx15
                 0x0015 => {
-                    self.display = format!("Set delay timer to V{x:X} ({})", self.v[x]);
+                    let display = format!("Set delay timer to V{x:X} ({})", self.v[x]);
                     bus.clock.delay_timer = self.v[x];
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // Fx18
                 0x0018 => {
-                    self.display = format!("Set sound timer to V{x:X} ({})", self.v[x]);
+                    let display = format!("Set sound timer to V{x:X} ({})", self.v[x]);
                     (*bus.clock.sound_timer).store(self.v[x], std::sync::atomic::Ordering::SeqCst);
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // Fx1E
                 0x001E => {
-                    self.display = format!("Set I to I + V{x:X}");
+                    let display = format!("Set I to I + V{x:X}");
                     self.i += usize::from(self.v[x]);
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // Fx29
                 0x0029 => {
-                    self.display = format!("Set I to addr of sprite digit {}", self.v[x]);
+                    let display = format!("Set I to addr of sprite digit {}", self.v[x]);
                     // set I to the sprite address of the digit in Vx
                     self.i = 5 * usize::from(self.v[x]);
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // Fx33
                 0x0033 => {
-                    self.display = format!("Store BCD of {} starting at I", self.v[x]);
+                    let display = format!("Store BCD of {} starting at I", self.v[x]);
                     // store BCD representation of decimal in Vx
                     bus.memory[self.i] = (self.v[x] / 100) % 10;
                     bus.memory[self.i + 1] = (self.v[x] / 10) % 10;
                     bus.memory[self.i + 2] = self.v[x] % 10;
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // Fx55
                 0x0055 => {
-                    self.display = format!("Store V0 to V{x:X} starting at I");
+                    let display = format!("Store V0 to V{x:X} starting at I");
                     for i in 0..=x {
                         bus.memory[self.i] = self.v[i];
                         self.i += 1;
                     }
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // Fx65
                 0x0065 => {
-                    self.display = format!("Read memory at I into V0 to V{x:X}");
+                    let display = format!("Read memory at I into V0 to V{x:X}");
                     for i in 0..=x {
                         self.v[i] = bus.memory[self.i];
                         self.i += 1;
                     }
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
 
                 // invalid
                 _ => {
-                    self.display = "Invalid instruction".into();
+                    let display = "Invalid instruction".into();
                     log::error!("Invalid FX__ instruction: {opcode:X}");
-                    PCUpdate::Next
+                    (PCUpdate::Next, display)
                 }
             },
 
             // invalid
             _ => {
-                self.display = "Invalid instruction".into();
+                let display = "Invalid instruction".into();
                 log::error!("Unknown opcode: {opcode:X}");
-                PCUpdate::Next
+                (PCUpdate::Next, display)
             }
         }
     }

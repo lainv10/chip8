@@ -1,5 +1,4 @@
 use std::{
-    collections::VecDeque,
     path::PathBuf,
     sync::{atomic::Ordering, Arc, Mutex},
 };
@@ -429,18 +428,10 @@ impl ConfigWindow {
 /// such as registers, stack memory, instructions, and timers.
 #[derive(Default)]
 struct DebugView {
-    /// Store the display strings of the executed opcodes.
-    /// Tuple order is `(opcode_address, opcode, display_string)`.
-    display_strings: VecDeque<(usize, usize, String)>,
-
     /// Mirrors the paused state of the `App`. This is used to determine
     /// whether the instructions window should be drawn with every instruction or not.
     paused: bool,
 }
-
-/// The maximum amount of instructions to show in the instructions list
-/// of the `DebugView`.
-const MAX_INSTRUCTIONS: usize = 200;
 
 impl DebugView {
     fn toggle_pause(&mut self) {
@@ -499,33 +490,15 @@ impl DebugView {
     /// in their opcode form as well as a more descriptive readable form.
     fn draw_instructions_window(&mut self, ctx: &Context, chip8: &Chip8) {
         egui::Window::new("Instructions").show(ctx, |ui| {
-            if let Some((front_addr, _, _)) = self.display_strings.front() {
-                if front_addr != &chip8.processor.last_opcode_addr {
-                    let display = (
-                        chip8.processor.last_opcode_addr,
-                        chip8.processor.last_opcode,
-                        chip8.processor.display.clone(),
-                    );
-                    self.display_strings.push_front(display);
-                    if self.display_strings.len() > MAX_INSTRUCTIONS {
-                        self.display_strings.pop_back();
-                    }
-                }
-            } else {
-                let display = (
-                    chip8.processor.last_opcode_addr,
-                    chip8.processor.last_opcode,
-                    chip8.processor.display.clone(),
-                );
-                self.display_strings.push_front(display);
-            }
-
             if !self.paused {
                 ui.heading("Pause the execution to inspect instructions.");
                 return;
             }
 
-            ui.heading(format!("Program counter: {:#06X}", chip8.processor.pc));
+            ui.heading(format!(
+                "Current Program Counter: {:#06X}",
+                chip8.processor.pc
+            ));
             ui.separator();
 
             egui::ScrollArea::vertical()
@@ -541,12 +514,12 @@ impl DebugView {
                             ui.add(egui::Separator::default().vertical());
                             ui.heading("Description");
                             ui.end_row();
-                            for (address, opcode, display) in &self.display_strings {
-                                ui.heading(format!("{:#06X}", address));
+                            for instr in &chip8.processor.instructions {
+                                ui.heading(format!("{:#06X}", instr.address));
                                 ui.add(egui::Separator::default().vertical());
-                                ui.heading(format!("{:#06X}", opcode));
+                                ui.heading(format!("{:#06X}", instr.opcode));
                                 ui.add(egui::Separator::default().vertical());
-                                ui.heading(display);
+                                ui.heading(&instr.display);
                                 ui.end_row();
                             }
                         });
