@@ -61,7 +61,10 @@ impl Chip8 {
             graphics: self.bus.graphics,
             ..Default::default()
         };
+        // create new processor with shift quirk settings retained
+        let shift_quirk_enabled = self.processor.shift_quirk_enabled;
         self.processor = Processor::new();
+        self.processor.shift_quirk_enabled = shift_quirk_enabled;
     }
 
     /// Convenience method for resetting the `Chip8` and loading the given ROM.
