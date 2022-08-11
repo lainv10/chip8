@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use super::Bus;
 
 /// The default starting address for the `Processor`.
-/// For most Chip8 programs, 0x200 should be 
+/// For most Chip8 programs, 0x200 should be
 const STARTING_PC: usize = 0x200;
 
 /// The maximum amount of instructions that should be stored
@@ -53,7 +53,13 @@ pub struct Processor {
     /// Stack memory
     pub stack: [usize; 16],
 
-    /// A display string explaining what the current opcode is doing
+    /// Indicates whether the shift quirk is enabled.
+    /// This affects the 8xy6 and 8xyE instructions.
+    /// 
+    /// When `true`, the `Vx` register takes the value of `Vy` before being shifted.
+    pub shift_quirk_enabled: bool,
+
+    /// A display string explaining what the current opcode is doing.
     pub display: String,
 
     /// The last [`INSTRUCTION_BUFFER_LENGTH`] instructions that the
@@ -115,7 +121,7 @@ impl Processor {
         }
     }
 
-    /// Process a single opcode. This will apply any state changing effects of the 
+    /// Process a single opcode. This will apply any state changing effects of the
     /// instructions onto the given [`Bus`].
     fn process_opcode(&mut self, opcode: usize, bus: &mut Bus) -> (PCUpdate, String) {
         // define some commonly used variables
@@ -282,6 +288,9 @@ impl Processor {
 
                 // 8xy6
                 0x6 => {
+                    if self.shift_quirk_enabled {
+                        self.v[x] = self.v[y];
+                    }
                     let overflow = self.v[x] & 1;
                     let display = format!("V{x:X} shifted one right, VF = {}", overflow);
                     self.v[x] >>= 1;
@@ -305,10 +314,12 @@ impl Processor {
 
                 // 8xyE
                 0xE => {
+                    if self.shift_quirk_enabled {
+                        self.v[x] = self.v[y];
+                    }
                     let overflow = (self.v[x] & 0x80) >> 7;
                     let display = format!("V{x:X} shifted one left, VF = {}", overflow);
                     self.v[x] <<= 1;
-                    // self.v[y] = self.v[x] << 1;
                     self.v[0xF] = overflow;
                     (PCUpdate::Next, display)
                 }

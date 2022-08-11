@@ -5,8 +5,10 @@ use crate::gui::{Chip8Message, Gui};
 use anyhow::Context;
 use chip8::Chip8;
 
+pub const DEFAULT_STEPS_PER_FRAME: u32 = 10;
+
 /// The main application state.
-/// 
+///
 /// Handles interactions between the frontend [`Gui`] and the backend [`Chip8`].
 pub struct App {
     pub chip8: Chip8,
@@ -42,7 +44,7 @@ impl App {
             gui,
             chip8,
             _audio: audio,
-            steps_per_frame: 10,
+            steps_per_frame: DEFAULT_STEPS_PER_FRAME,
             paused: false,
             last_rom,
         }
@@ -92,6 +94,9 @@ impl App {
                     self.chip8.bus.graphics.set_background_color(color)
                 }
                 Chip8Message::SetStepRate(steps) => self.steps_per_frame = steps,
+                Chip8Message::SetShiftQuirk(enabled) => {
+                    self.chip8.processor.shift_quirk_enabled = enabled
+                }
                 Chip8Message::UpdateKeys(key_updates) => {
                     for (key_code, pressed) in key_updates {
                         self.chip8.update_key_state(key_code, pressed);
