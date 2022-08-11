@@ -64,5 +64,9 @@ cargo run --release -- <path_to_program>
 
 ## Resources
 
-[Cowgod's Chip-8 Technical Reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM) 
-was a very helpful resource during the development of this interpreter.
+ - [Cowgod's Chip-8 Technical Reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM) 
+    was a very helpful resource during the development of this interpreter.
+
+ - [Timendus' CHIP-8 Test Suite](https://github.com/Timendus/chip8-test-suite)
+    contained many useful tests for checking the correctness of the interpreter implementation,
+    as well as information about several CHIP-8 quirks.
