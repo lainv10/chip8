@@ -1,0 +1,19 @@
+[package]
+name = "chip8"
+version = "0.1.0"
+edition = "2021"
+authors = ["jpglain"]
+
+[features]
+default = ["persistence"]
+# enables persistence support with `serde`.
+persistence = ["serde", "serde-big-array"]
+
+[dependencies]
+log = "0.4"
+getrandom = "0.2"
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde-big-array = { version = "0.4", optional = true }
+
+[lib]
+path = "src/chip8.rs"
