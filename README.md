@@ -20,3 +20,7 @@ Using [cargo](https://doc.rust-lang.org/cargo/)
 `$ cd chip8`
 
 `$ cargo run --release`
+
+## Resources
+[Cowgod's Chip-8 Technical Reference](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM) 
+was a very helpful resource during the development of this interpreter.
