@@ -8,7 +8,7 @@ const STARTING_PC: usize = 0x200;
 
 /// The maximum amount of instructions that should be stored
 /// in the `Processor`'s buffer of instructions.
-const INSTRUCTION_BUFFER_LENGTH: usize = 200;
+const INSTRUCTION_BUFFER_LENGTH: usize = 100;
 
 /// Describes how the program counter should be updated after
 /// executing an instruction.
