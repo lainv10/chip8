@@ -3,6 +3,7 @@ name = "frontend"
 version = "0.1.0"
 edition = "2021"
 authors = ["jpglain"]
+default-run = "chip8"
 
 [dependencies]
 chip8 = { path = "../chip8" }
@@ -16,3 +17,7 @@ eframe = { git = "https://github.com/emilk/egui", rev = "eeae485629fca24a81a7251
     "glow",
     "default_fonts",
 ] }
+
+[[bin]]
+name = "chip8"
+path = "./src/main.rs"
