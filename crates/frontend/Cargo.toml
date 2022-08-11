@@ -3,6 +3,7 @@ name = "frontend"
 version = "0.1.0"
 edition = "2021"
 authors = ["jpglain"]
+license = "MIT"
 default-run = "chip8"
 
 [dependencies]

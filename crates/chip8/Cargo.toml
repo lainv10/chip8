@@ -3,6 +3,7 @@ name = "chip8"
 version = "0.1.0"
 edition = "2021"
 authors = ["jpglain"]
+license = "MIT"
 
 [features]
 default = ["persistence"]
