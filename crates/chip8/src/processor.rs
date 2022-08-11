@@ -57,9 +57,15 @@ pub struct Processor {
 
     /// Indicates whether the shift quirk is enabled.
     /// This affects the 8xy6 and 8xyE instructions.
-    /// 
+    ///
     /// When `true`, the `Vx` register takes the value of `Vy` before being shifted.
     pub shift_quirk_enabled: bool,
+
+    /// Indicates whether the processor should wait for the vertical
+    /// blank interrupt before drawing a sprite.
+    ///
+    /// This will limit the sprite drawing to 60 sprites per second.
+    pub vblank_wait: bool,
 
     /// A display string explaining what the current opcode is doing.
     pub display: String,
@@ -371,6 +377,16 @@ impl Processor {
 
             // Dxyn
             0xD => {
+                if self.vblank_wait {
+                    // spin wait for vblank
+                    loop {
+                        bus.clock.update();
+                        if bus.clock.vblank_interrupt {
+                            break;
+                        }
+                    }
+                }
+
                 let n = opcode & 0xF;
                 let x = usize::from(self.v[x]) % graphics::WIDTH;
                 let y = usize::from(self.v[y]) % graphics::HEIGHT;

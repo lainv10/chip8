@@ -13,6 +13,7 @@ pub struct Clock {
     pub delay_timer: u8,
     #[cfg_attr(feature = "persistence", serde(skip))]
     pub sound_timer: Arc<AtomicU8>,
+    pub vblank_interrupt: bool,
     #[cfg_attr(feature = "persistence", serde(skip, default = "Instant::now"))]
     last_delay: Instant,
 }
@@ -23,6 +24,7 @@ impl Default for Clock {
             delay_timer: Default::default(),
             sound_timer: Default::default(),
             last_delay: Instant::now(),
+            vblank_interrupt: Default::default(),
         }
     }
 }
@@ -41,7 +43,11 @@ impl Clock {
             if self.sound_timer.load(Ordering::SeqCst) > 0 {
                 self.sound_timer.fetch_sub(1, Ordering::SeqCst);
             }
+
+            self.vblank_interrupt = true;
             self.last_delay = Instant::now();
+        } else {
+            self.vblank_interrupt = false;
         }
     }
 }

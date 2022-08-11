@@ -49,6 +49,9 @@ pub enum Chip8Message {
     /// Enable/disable the shift quirk in the Chip8 instance
     SetShiftQuirk(bool),
 
+    /// Enable/disable the vblank wait option in the Chip8 instance.
+    SetVblankWait(bool),
+
     /// Update the key state of the `Chip8`. This contains
     /// a `Vec` of tuples, where each tuple contains a `u8` `Chip8` key
     /// code, as well as a `bool` representing if it is pressed down or not.
@@ -365,6 +368,7 @@ struct ConfigWindow {
     background_rgb: [u8; 3],
     steps_per_frame: u32,
     shift_quirk_enabled: bool,
+    vblank_wait_enabled: bool,
 }
 
 impl Default for ConfigWindow {
@@ -375,6 +379,7 @@ impl Default for ConfigWindow {
             background_rgb: chip8::graphics::DEFAULT_BACKGROUND.0,
             steps_per_frame: crate::app::DEFAULT_STEPS_PER_FRAME,
             shift_quirk_enabled: false,
+            vblank_wait_enabled: false,
         }
     }
 }
@@ -416,13 +421,24 @@ impl ConfigWindow {
                     ui.end_row();
 
                     ui.label("Enable Shift Quirk");
-                    let checkbox = ui.checkbox(&mut self.shift_quirk_enabled, "");
-                    if checkbox.changed() {
+                    let shift_quirk_checkbox = ui.checkbox(&mut self.shift_quirk_enabled, "");
+                    if shift_quirk_checkbox.changed() {
                         messages.push(Chip8Message::SetShiftQuirk(self.shift_quirk_enabled))
                     }
-                    checkbox.on_hover_text(
-                        "Enable/disable the shift quirk in the interpreter.
-                    Try toggling this if a program isn't working as expected.",
+                    shift_quirk_checkbox.on_hover_text(
+                        "Enable/disable the shift quirk in the interpreter. \
+                        Try toggling this if a program isn't working as expected.",
+                    );
+                    ui.end_row();
+
+                    ui.label("Enable VBLANK Wait");
+                    let vblank_wait_checkbox = ui.checkbox(&mut self.vblank_wait_enabled, "");
+                    if vblank_wait_checkbox.changed() {
+                        messages.push(Chip8Message::SetVblankWait(self.vblank_wait_enabled));
+                    }
+                    vblank_wait_checkbox.on_hover_text(
+                        "Enable/disable waiting for the vertical blank interrupt before drawing a sprite. \
+                        This will limit the amount of sprite draw calls to 60 calls per second."
                     );
                     ui.end_row();
                 });

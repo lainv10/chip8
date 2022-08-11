@@ -61,10 +61,12 @@ impl Chip8 {
             graphics: self.bus.graphics,
             ..Default::default()
         };
-        // create new processor with shift quirk settings retained
+        // create new processor with shift quirk and vblank wait settings retained
         let shift_quirk_enabled = self.processor.shift_quirk_enabled;
+        let vblank_wait = self.processor.vblank_wait;
         self.processor = Processor::new();
         self.processor.shift_quirk_enabled = shift_quirk_enabled;
+        self.processor.vblank_wait = vblank_wait;
     }
 
     /// Convenience method for resetting the `Chip8` and loading the given ROM.

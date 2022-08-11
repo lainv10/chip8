@@ -97,6 +97,9 @@ impl App {
                 Chip8Message::SetShiftQuirk(enabled) => {
                     self.chip8.processor.shift_quirk_enabled = enabled
                 }
+                Chip8Message::SetVblankWait(enabled) => {
+                    self.chip8.processor.vblank_wait = enabled;
+                }
                 Chip8Message::UpdateKeys(key_updates) => {
                     for (key_code, pressed) in key_updates {
                         self.chip8.update_key_state(key_code, pressed);
