@@ -6,7 +6,7 @@ mod input;
 mod memory;
 mod processor;
 
-/// Contains the different components of the `Chip8` system, exluding the `Processor`.
+/// Contains all the different components of the `Chip8` system, excluding the `Processor`.
 #[derive(Default)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub struct Bus {
@@ -16,6 +16,8 @@ pub struct Bus {
     pub memory: memory::Memory,
 }
 
+/// The main CHIP-8 interpreter state, contains all the components of the
+/// CHIP-8 and procedures to interact with them at a high level.
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[derive(Default)]
 pub struct Chip8 {

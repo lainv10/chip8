@@ -2,7 +2,8 @@ use std::collections::VecDeque;
 
 use super::Bus;
 
-/// The default starting address for most Chip8 programs.
+/// The default starting address for the `Processor`.
+/// For most Chip8 programs, 0x200 should be 
 const STARTING_PC: usize = 0x200;
 
 /// The maximum amount of instructions that should be stored
@@ -61,6 +62,8 @@ pub struct Processor {
 }
 
 impl Processor {
+    /// Create a new `Processor` instance. This is similar to `Processor::default`,
+    /// with the exception that the program counter is set to [`STARTING_PC`].
     pub fn new() -> Self {
         Self {
             pc: STARTING_PC,
@@ -68,6 +71,9 @@ impl Processor {
         }
     }
 
+    /// Execute one processor cycle. This will fetch, decode, and execute the next
+    /// opcode from memory. Note that if the processor is currently waiting on
+    /// input from the user, no instructions will be executed.
     pub fn cycle(&mut self, bus: &mut Bus) {
         // if the input system is waiting for a key, don't process any opcodes
         if bus.input.waiting() {
@@ -109,6 +115,8 @@ impl Processor {
         }
     }
 
+    /// Process a single opcode. This will apply any state changing effects of the 
+    /// instructions onto the given [`Bus`].
     fn process_opcode(&mut self, opcode: usize, bus: &mut Bus) -> (PCUpdate, String) {
         // define some commonly used variables
         let x = (opcode & 0x0F00) >> 8;

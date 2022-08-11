@@ -5,7 +5,9 @@ use crate::gui::{Chip8Message, Gui};
 use anyhow::Context;
 use chip8::Chip8;
 
-/// Application state.
+/// The main application state.
+/// 
+/// Handles interactions between the frontend [`Gui`] and the backend [`Chip8`].
 pub struct App {
     pub chip8: Chip8,
     gui: Gui,
@@ -70,18 +72,9 @@ impl App {
             .context("Failed to deserialize Chip8 instance from file.")?;
         Ok(chip8)
     }
-}
 
-impl eframe::App for App {
-    /// Updates the app state and renders the GUI.
-    fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
-        // update chip8 state
-        if !self.paused {
-            for _ in 0..self.steps_per_frame {
-                self.chip8.step();
-            }
-        }
-
+    /// Update the `Gui` and handle all state-changing messages.
+    fn update_gui(&mut self, ctx: &eframe::egui::Context) {
         for message in self.gui.update(ctx, &self.chip8) {
             match message {
                 Chip8Message::LoadRom(data) => {
@@ -119,6 +112,21 @@ impl eframe::App for App {
                 Chip8Message::Step => self.chip8.step(),
             }
         }
+    }
+}
+
+impl eframe::App for App {
+    /// Updates the app and gui state and renders the GUI.
+    fn update(&mut self, ctx: &eframe::egui::Context, _frame: &mut eframe::Frame) {
+        // update chip8 state
+        if !self.paused {
+            for _ in 0..self.steps_per_frame {
+                self.chip8.step();
+            }
+        }
+
+        // update gui
+        self.update_gui(ctx);
 
         // request another call to `update` right after this call
         ctx.request_repaint();

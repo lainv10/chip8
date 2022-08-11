@@ -20,6 +20,7 @@ pub struct Input {
 }
 
 impl Input {
+    /// Create a new [`Input`] instance.
     pub fn new() -> Self {
         Self::default()
     }

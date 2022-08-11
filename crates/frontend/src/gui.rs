@@ -274,6 +274,7 @@ impl MenuPanel {
         });
     }
 
+    /// Toggle the `MenuPanel` paused state.
     fn toggle_pause(&mut self) {
         self.paused = !self.paused;
     }

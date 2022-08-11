@@ -17,7 +17,18 @@ pub struct Clock {
     last_delay: Instant,
 }
 
+impl Default for Clock {
+    fn default() -> Self {
+        Self {
+            delay_timer: Default::default(),
+            sound_timer: Default::default(),
+            last_delay: Instant::now(),
+        }
+    }
+}
+
 impl Clock {
+    /// Create a new [`Clock`].
     pub fn new() -> Self {
         Self::default()
     }
@@ -31,16 +42,6 @@ impl Clock {
                 self.sound_timer.fetch_sub(1, Ordering::SeqCst);
             }
             self.last_delay = Instant::now();
-        }
-    }
-}
-
-impl Default for Clock {
-    fn default() -> Self {
-        Self {
-            delay_timer: Default::default(),
-            sound_timer: Default::default(),
-            last_delay: Instant::now(),
         }
     }
 }

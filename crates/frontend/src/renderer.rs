@@ -80,6 +80,7 @@ impl Renderer {
         (vbo, vao)
     }
 
+    /// Load the given RGB buffer as a  texture into the given OpenGL context.
     unsafe fn load_texture(&mut self, gl: &glow::Context, buffer: &[u8]) {
         let texture = gl.create_texture().unwrap();
         gl.active_texture(glow::TEXTURE0);
