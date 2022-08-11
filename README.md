@@ -55,6 +55,12 @@ Build and run the release build with [`cargo`](https://doc.rust-lang.org/cargo/)
 ```
 cargo run --release
 ```
+This will run the GUI with no CHIP-8 program loaded. You can load a CHIP-8 program
+using the "Open ROM" button in the menu bar.
+Alternatively, you can provide a CHIP-8 program to load on startup via the command line:
+```
+cargo run --release -- <path_to_program>
+```
 
 ## Resources
 
