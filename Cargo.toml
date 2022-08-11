@@ -1,2 +1,6 @@
 [workspace]
 members = ["crates/chip8", "crates/frontend"]
+
+[profile.release]
+strip = true
+lto = "thin"

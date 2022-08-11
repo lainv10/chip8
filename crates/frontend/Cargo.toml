@@ -16,7 +16,3 @@ eframe = { git = "https://github.com/emilk/egui", rev = "eeae485629fca24a81a7251
     "glow",
     "default_fonts",
 ] }
-
-[profile.release]
-strip = true
-lto = "thin"
