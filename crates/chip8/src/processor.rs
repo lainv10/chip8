@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+use crate::graphics;
+
 use super::Bus;
 
 /// The default starting address for the `Processor`.
@@ -370,8 +372,8 @@ impl Processor {
             // Dxyn
             0xD => {
                 let n = opcode & 0xF;
-                let x = self.v[x].into();
-                let y: usize = self.v[y].into();
+                let x = usize::from(self.v[x]) % graphics::WIDTH;
+                let y = usize::from(self.v[y]) % graphics::HEIGHT;
                 let display = format!(
                     "Draw {n} byte sprite from addr {:#06X} at point ({x}, {y})",
                     self.i
