@@ -15,7 +15,7 @@ pub struct App {
     gui: Gui,
     // keep the audio system alive for as long as the app,
     // so the stream is not dropped.
-    _audio: AudioSystem,
+    audio: AudioSystem,
     steps_per_frame: u32,
     paused: bool,
     last_rom: Vec<u8>,
@@ -34,20 +34,30 @@ impl App {
 
         let gui = Gui::new(cc);
 
-        let audio = AudioSystem::new(chip8.bus.clock.sound_timer.clone())
-            .expect("Failed to initialize audio system.");
-        if audio.play().is_err() {
-            log::error!("Failed to play audio stream.");
-        }
+        let audio = Self::create_audio_system(&chip8).expect("Failed to create AudioSystem");
 
         Self {
             gui,
             chip8,
-            _audio: audio,
+            audio,
             steps_per_frame: DEFAULT_STEPS_PER_FRAME,
             paused: false,
             last_rom,
         }
+    }
+
+    /// Create a new `AudioSystem` using the sound timer from the given
+    /// `Chip8` instance.
+    ///
+    /// This will also start the audio stream. This function will only return
+    /// the `AudioSystem` if it can be both created and played without errors,
+    /// otherwise it returns `Err`.
+    fn create_audio_system(chip8: &Chip8) -> Result<AudioSystem, anyhow::Error> {
+        let audio = AudioSystem::new(chip8.bus.clock.sound_timer.clone())?;
+        audio.play().map(|_| audio).map_err(|e| {
+            log::error!("Failed to play audio stream: {e}");
+            e
+        })
     }
 
     /// Get the ROM data from the path provided as the first argument when
@@ -75,6 +85,15 @@ impl App {
         Ok(chip8)
     }
 
+    /// Reset the audio system. This should be called anytime the `Chip8` is reset,
+    /// as the new sound timer needs to be linked to a new `AudioSystem`.
+    fn reset_audio(&mut self) {
+        match Self::create_audio_system(&self.chip8) {
+            Ok(audio) => self.audio = audio,
+            Err(e) => log::error!("Failed to create new AudioSystem: {e}"),
+        }
+    }
+
     /// Update the `Gui` and handle all state-changing messages.
     fn update_gui(&mut self, ctx: &eframe::egui::Context) {
         for message in self.gui.update(ctx, &self.chip8) {
@@ -82,10 +101,12 @@ impl App {
                 Chip8Message::LoadRom(data) => {
                     self.chip8.reset_and_load(data.clone());
                     self.last_rom = data;
+                    self.reset_audio();
                 }
                 Chip8Message::ResetROM => {
                     // load the last loaded ROM
                     self.chip8.reset_and_load(self.last_rom.clone());
+                    self.reset_audio();
                 }
                 Chip8Message::SetForegroundColor(color) => {
                     self.chip8.bus.graphics.set_foreground_color(color)
@@ -112,7 +133,10 @@ impl App {
                     }
                 }
                 Chip8Message::LoadState(path) => match self.load_chip8(&path) {
-                    Ok(chip8) => self.chip8 = chip8,
+                    Ok(chip8) => {
+                        self.chip8 = chip8;
+                        self.reset_audio();
+                    }
                     Err(e) => {
                         log::error!("Failed to load Chip8 state from {}: {e}.", path.display())
                     }
