@@ -1,6 +1,6 @@
 # CHIP-8
 
-![CHIP-8 Interpreter Clip 1](./clip1.gif "Debug view of CHIP-8 interpreter running Space Invaders")
+![Debug view of CHIP-8 interpreter running Space Invaders](./res/clip1.gif "Debug view of CHIP-8 interpreter running Space Invaders")
 
 *Debug view of the interpreter, running the
 [Space Invaders CHIP-8 ROM by David Winter](https://github.com/dmatlack/chip8/blob/aebb1ae08505d129e56ae61ee08d3193a29a2e1a/roms/games/Space%20Invaders%20%5BDavid%20Winter%5D.ch8)*
@@ -19,11 +19,11 @@ It was also used as an introduction to emulator development, something that I am
  - Save and load the CHIP-8 interpreter state to/from disk.
  - Debug CHIP-8 programs with a "debug view" that allows inspecting the interpreter state while the program is running.
 
-![CHIP-8 Interpreter Clip 2](./clip2.gif "Using the save/load state feature of the interpreter")
+![Using the save/load state feature of the interpreter](./res/clip2.gif "Using the save/load state feature of the interpreter")
 
 *Using the save/load state feature of the interpreter while running the [Tetris ROM by Fran Dachille](https://github.com/dmatlack/chip8/blob/aebb1ae08505d129e56ae61ee08d3193a29a2e1a/roms/games/Tetris%20%5BFran%20Dachille,%201991%5D.ch8). Note that saving and loading states opens a file dialog to choose a file, so multiple save states are possible.*
 
-![CHIP-8 Interpreter Clip 3](./clip3.jpg "Changing the foreground and background colors of the interpreter's graphics")
+![Changing the foreground and background colors of the interpreter's graphics](./res/clip3.jpg "Changing the foreground and background colors of the interpreter's graphics")
 
 *Changing the foreground and background colors of the interpreter's graphics running the 
 [Space Invaders CHIP-8 ROM by David Winter](https://github.com/dmatlack/chip8/blob/aebb1ae08505d129e56ae61ee08d3193a29a2e1a/roms/games/Space%20Invaders%20%5BDavid%20Winter%5D.ch8)*
