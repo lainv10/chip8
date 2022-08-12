@@ -83,12 +83,22 @@ impl GraphicsBuffer {
     /// Set the foreground color used by the RGB representation of the graphics buffer.
     #[inline]
     pub fn set_foreground_color(&mut self, foreground: RGB8) {
+        self.vram.iter_mut().for_each(|color| {
+            if *color == self.foreground_rgb {
+                *color = foreground;
+            }
+        });
         self.foreground_rgb = foreground;
     }
 
     /// Set the background color used by the RGB representation of the graphics buffer.
     #[inline]
     pub fn set_background_color(&mut self, background: RGB8) {
+        self.vram.iter_mut().for_each(|color| {
+            if *color == self.background_rgb {
+                *color = background;
+            }
+        });
         self.background_rgb = background;
     }
 
