@@ -122,8 +122,6 @@ impl Gui {
             // send the color message to the chip8 backend so that
             // it restores the color settings for this session
             self.config_window.push_color_messages(&mut messages);
-            // reset the debug view to show the new chip8 state
-            self.debug_view = Default::default();
         }
         if menu_response.toggle_view {
             self.current_view = match self.current_view {
@@ -601,6 +599,7 @@ impl DebugView {
                     chip8.bus.input.is_key_pressed(code),
                     format!("{code:X}"),
                 );
+                
                 ui.add(label);
             };
 
