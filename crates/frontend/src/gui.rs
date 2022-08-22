@@ -256,7 +256,7 @@ impl MenuPanel {
         messages: &mut Vec<Chip8Message>,
         response: &mut MenuPanelResponse,
     ) {
-        ui.with_layout(egui::Layout::right_to_left(), |ui| {
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             let play_pause_label = if self.paused {
                 "\u{23F5} Play"
             } else {
