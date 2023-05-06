@@ -60,7 +60,7 @@ and edit register and memory values on the fly.
 
 Clone the repository:
 ```
-git clone https://github.com/jpglain/chip8.git
+git clone https://github.com/lainv10/chip8.git
 cd chip8
 ```
 
